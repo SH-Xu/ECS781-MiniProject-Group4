@@ -67,5 +67,9 @@ def del_book(index):
     db.session.commit()
     return {"message": "item deleted successfully"}
 
+@app.route("/mylibrary/<index>", methods=["PATCH"])
+def edit_book(index):
+    pass
+
 if __name__ == "__main__":
     app.run(debug=True)
