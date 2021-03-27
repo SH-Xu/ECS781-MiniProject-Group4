@@ -60,8 +60,8 @@ def add_book():
     db.session.commit()
     return {"index": book.index}
 
-@app.route("/mylibrary/<index>", method=["DELETE"])
-def del_book():
+@app.route("/mylibrary/<index>", methods=["DELETE"])
+def del_book(index):
     book = Book.query.get(index)
     db.session.delete(book)
     db.session.commit()
