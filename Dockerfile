@@ -1,11 +1,15 @@
-FROM alpine
+FROM alpine:3.7
 
-RUN 
+RUN apk add --no-cache python3-dev && pip3 install pip
 
 WORKDIR /app
 
-COPY /requirements.txt /app
+COPY /requirements.txt /app/requirements.txt
 
-RUN pip3 install -r requirements.txt
+RUN pip install --upgrade -r requirements.txt
 
-COPY [""]
+EXPOSE 5001
+
+ENTRYPOINT ["python3"]
+
+CMD [ "mongoDB.py" ]

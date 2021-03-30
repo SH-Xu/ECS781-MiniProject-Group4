@@ -1,0 +1,11 @@
+version: "3"
+services:
+  mongoDB:
+    image: "mongo"
+    
+  mylibrary:
+    build: .
+    depends_on:
+      - mongoDB
+    ports:
+      - 5001:5001
