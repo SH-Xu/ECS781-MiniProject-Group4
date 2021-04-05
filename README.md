@@ -30,6 +30,14 @@ Simply pull docker image for MongoDB
 docker pull mongo
 ```
 
+Build container and run the service
+
+```
+docker create -it --name MongoTest -p 5000:27017 mongo
+```
+
+Here we map the port of mongoDB service from 27017 to 5000.
+
 #### 1.2.2 Implement Interface In Python
 
 Four different kinds of HTTP request corresponding to four operations on database. Interface including ```read```, ```write```, ```update```, ```delete``` methods.
@@ -152,3 +160,49 @@ Reponse Body:
 ## 2. Adavanced Task
 
 ### 2.1 HTTPS Implementation
+
+To setup HTTPS service, first run the following command
+
+```
+openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365
+```
+
+Modify app.py to run service over HTTPS.
+
+```
+if __name__ == "__main__":
+            context = ('cert.pem','key.pem')
+            app.run(host='0.0.0.0', 
+                    port=5001, 
+                    ssl_context=context
+                    )
+
+```
+
+Now the service can be accessed throught HTTPS.
+
+### 2.2 Hash-Based Authentication
+
+A complete hash-based authentication includes two stage.
+
+#### 2.2.1 Apply for an unique token
+
+```
+@app.route("/apply_token", methods=["POST", "GET"]) 
+```
+
+Here, we allow application through POST or GET method. After requeset is sent, flask would return an unique token. Authentication use Basic Auth.
+
+#### 2.2.2 Login through token
+
+```
+@app.route("/login", methods=["POST", "GET"]
+```
+
+To successfuly login, the token which just applied should be added to params of the request. The query params should include a key named ```token``` and value is token.
+
+### 2.3 User Accounts And Access Management
+
+In most situations, only administration account has the authority to write and delete. Besides, other user accounts can only read records.
+
+This functionality is implemented by assign a ```Authority_status``` value to decided the access of current user. ```Administrator``` is the user name of administration account.
