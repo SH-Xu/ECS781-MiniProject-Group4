@@ -1,5 +1,6 @@
 import json
 import requests
+import hashlib
 import base64
 import random
 import time
@@ -11,13 +12,22 @@ from mongoDB import MongoDB
 app = Flask(__name__)
 
 users = {
-    'YCH': ['123456']
+    'YCH': ['123456'],
+    'GYY': ['12345']
 }
+
+Administrator='YCH'
 
 Authority_status = 0
 
 
-def gen_token(uid):
+def get_md5(token):
+    md = hashlib.md5()
+    md.update(token.encode('utf-8'))
+    return md.digest()
+
+
+def gen_hash_token(uid):
     s1 = ':'.join([uid, str(random.random()), str(time.time() + 72000)])
     print("\ns1:", s1)
     print("type(s1):", type(s1))
@@ -38,9 +48,9 @@ def verify_token(token):
     print("\n_token1:", _token1)
     print("type(_token1):", type(_token1))
 
-    t1 = _token1.split(':')[0]
-    print("\nt1:", t1)
-    print("type(t1):", type(t1))
+    uid_name = _token1.split(':')[0]
+    print("\nt1:", uid_name)
+    print("type(t1):", type(uid_name))
 
     get1 = users.get(_token1.split(':')[0])[-1]
     print("\nget1", get1)
@@ -48,7 +58,7 @@ def verify_token(token):
     if not users.get(_token1.split(':')[0])[-1] == token:
         return "The token is not correct or matches your uid "
     if float(_token1.split(':')[-1]) >= time.time():
-        return 1
+        return 1,uid_name
     else:
         return "The token has timed out"
 
@@ -56,13 +66,13 @@ def verify_token(token):
 @app.route("/index")
 def index():
     global Authority_status
-    if Authority_status == 1:
-        return "This is project work for ECS781 group 10"
+    if Authority_status == 1 or Authority_status == 2:
+        return "This is mini-project for ECS781 group 10"
     else:
         return "Please login"
 
 
-@app.route("/apply_token", methods=["POST", "GET"])
+@app.route("/apply_token", methods=["POST", "GET"])  # 把token写入字典uid后面
 def apply_token():
     r1 = request.headers['Authorization'].split(' ')[-1]
     print("r1:", r1)
@@ -88,25 +98,31 @@ def apply_token():
     print(get2)
 
     if users.get(uid1)[0] == pw1:
-        return gen_token(uid1)
+        return gen_hash_token(uid1)
     else:
-        return 'error'
+        return 'Wrong uid or password'
 
 
 @app.route("/login", methods=["POST", "GET"])
 def login():
+    global Administrator
+    global Authority_status
     token = request.args.get("token").encode('utf-8')
-    if verify_token(token) == 1:
-        global Authority_status
+    code,name=verify_token(token)
+    if code == 1 and name==Administrator:
+        Authority_status = 2
+        return "You have login successfully"
+    elif code == 1:
         Authority_status = 1
         return "You have login successfully"
     else:
-        return 'error'
+        return 'Wrong token'
+
 
 @app.route("/logout", methods=["POST", "GET"])
 def logout():
     global Authority_status
-    if  Authority_status == 1:
+    if Authority_status == 1 or Authority_status == 2:
         Authority_status = 0
         return "You have logout successfully"
     else:
@@ -116,16 +132,17 @@ def logout():
 @app.route("/detail/<type>/<index>")
 def detail_book(type, index):
     global Authority_status
-    if Authority_status == 1:
+    if Authority_status == 1 or Authority_status == 2:
         url = "https://openlibrary.org/api/books?bibkeys={}:{}&format=json".format(type, index)
         return requests.get(url).json()
     else:
         return "Please login"
 
+
 @app.route("/mylibrary", methods=["GET"])
 def get_books():
     global Authority_status
-    if Authority_status == 1:
+    if Authority_status == 1 or Authority_status == 2:
         data = request.json
         if data is None or data == {}:
             return Response(
@@ -140,14 +157,13 @@ def get_books():
             status=200,
             mimetype="application/json")
     else:
-       return "Please login"
-
+        return "Please login"
 
 
 @app.route("/mylibrary", methods=["POST"])
 def add_book():
     global Authority_status
-    if Authority_status == 1:
+    if Authority_status == 2:
         data = request.json
         if data is None or data == {} or "Document" not in data:
             return Response(
@@ -162,13 +178,16 @@ def add_book():
             status=200,
             mimetype="application/json"
         )
+    elif Authority_status == 1:
+        return "Not an administrator account"
     else:
-       return "Please login"
+        return "Please login"
+
 
 @app.route("/mylibrary", methods=["PUT"])
 def update_book():
     global Authority_status
-    if Authority_status == 1:
+    if Authority_status == 2:
         data = request.json
         if data is None or data == {} or "DataToBeUpdated" not in data:
             return Response(
@@ -183,13 +202,16 @@ def update_book():
             status=200,
             mimetype="application/json"
         )
+    elif Authority_status == 1:
+        return "Not an administrator account"
     else:
-       return "Please login"
+        return "Please login"
+
 
 @app.route("/mylibrary", methods=["DELETE"])
 def del_book():
     global Authority_status
-    if Authority_status == 1:
+    if Authority_status == 2:
         data = request.json
         if data is None or data == {} or "Filter" not in data:
             return Response(
@@ -204,8 +226,11 @@ def del_book():
             status=200,
             mimetype="application/json"
         )
+    elif Authority_status == 1:
+        return "Not an administrator account"
     else:
-       return "Please login"
+        return "Please login"
+
 
 if __name__ == "__main__":
     app.run(debug=True)
